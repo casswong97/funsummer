@@ -1,0 +1,88 @@
+---
+title: "HW 9"
+author: "Cassandra"
+date: "4/5/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+docapt <- read.csv("KaggleV2-May-2016.csv")
+library(chron)
+library(lubridate)
+library(ggplot2)
+```
+
+```{r}
+docapt$PatientId <- NULL
+docapt$AppointmentID <- NULL
+
+docapt$fullScheduledDate <- as.POSIXct(substr(docapt$ScheduledDay, 1, 10))
+docapt$fullScheduledTime <- as.POSIXct(substr(docapt$ScheduledDay, 12, 19), format = "%H:%M:%OS")
+docapt$AppointmentDay <- as.POSIXct(substr(docapt$AppointmentDay, 1, 10))
+
+docapt$ScheduledDay <- NULL
+
+docapt$hourOfSchedule <- hour(docapt$fullScheduledTime) #helps with time of day
+docapt$hourOfSchedule <- ifelse((minute(docapt$fullScheduledTime) >= 16 & minute(docapt$fullScheduledTime) <= 30), docapt$hourOfSchedule+0.25, docapt$hourOfSchedule)
+docapt$hourOfSchedule <- ifelse((minute(docapt$fullScheduledTime) >= 31 & minute(docapt$fullScheduledTime) <= 45), docapt$hourOfSchedule+0.5, docapt$hourOfSchedule)
+docapt$hourOfSchedule <- ifelse((minute(docapt$fullScheduledTime) >= 46 & minute(docapt$fullScheduledTime) <= 60), docapt$hourOfSchedule+0.75, docapt$hourOfSchedule)
+
+patientHours <- seq(from = 0, to = 23.75, by = 0.25)
+numPatientHoursAt <- numeric(length(patientHours))
+for(i in 1:length(patientHours)) {
+  numPatientHoursAt[i] = length(which(docapt$hourOfSchedule == patientHours[i])) 
+}
+
+patientHours$numHours <- as.data.frame(patientHours)
+numPatientHoursAt <- as.data.frame(numPatientHoursAt)
+docapt1 <- cbind(patientHours, numPatientHoursAt)
+
+#this plot shows how many patients are scheduling appointments per each 15 minute interval in the day
+scheduledTimePlot <- ggplot(data = docapt1, aes(x=patientHours, y=numPatientHoursAt)) + geom_line() + geom_smooth()
+scheduledTimePlot
+```
+
+```{r}
+docapt$weekday <- weekdays(as.Date(docapt$fullScheduledDate))
+docapt$month <- format(docapt$fullScheduledDate,"%m")
+docapt$month <- as.numeric(as.character(docapt$month))
+docapt$weekday <- ordered(docapt$weekday, levels = c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+
+barplot(table(docapt$weekday), ylab = "Number of Scheduled Appointments", xlab ="Day", main="Number of Patients Scheduling Appointments per Day of Week", col = docapt$weekday)
+```
+```{r}
+barplot(table(docapt$month), ylab = "Number of Scheduled Appointments", xlab ="Day", main="Number of Patients Scheduling Appointments per Month", col = docapt$month)
+```
+```{r}
+docapt$appointmentMonth <- format(docapt$AppointmentDay,"%m")
+docapt$appointmentMonth <- as.numeric(as.character(docapt$appointmentMonth), na.rm=TRUE)
+barplot(table(docapt$appointmentMonth), ylab = "Number of Scheduled Appointments", xlab ="Month", main="Number of Patients Scheduled Appointments per Month", col = docapt$appointmentMonth)
+```
+
+```{r}
+docapt$waitingTime <- docapt$AppointmentDay - docapt$fullScheduledDate
+#gets the number of days instead of seconds
+docapt$waitingTime <- (docapt$waitingTime / 86400)
+
+ggplot(data = docapt, y = docapt$waitingTime, jitter = True)
+
+docapt$No.show <- ifelse(docapt$No.show == "No", 1, 0)
+#1 = showed up, 0 = no show
+
+plot1 <- ggplot() + geom_jitter(aes(y = docapt$waitingTime, x = docapt$No.show), data = docapt, stat="identity")
+plot1
+
+proportionNoShows = length(which(docapt$No.show == 0)) / (length(which(docapt$No.show == 1)) + length(which(docapt$No.show == 0)))
+
+cat("The number of docapt showing up to the appointment is", length(which(docapt$No.show == 1)), "and the number of docapt not showing up to the appointment is", length(which(docapt$No.show == 0)), ". The proportion of people not showing up is", proportionNoShows, ".")
+
+#next steps:
+#1. make a thing where it shows how many no shows there were per month (make a line chart like above)
+#2. make a bar chart where it shows how many no shows there were each month (clustered column with shows), do some proportions
+```
+
+```{r}
+counts3= table(docapt$AgeGroup, docapt$No.show)
+barplot(counts3, main="Appointment Attendance by Generation", beside=TRUE, names.arg = c("Showed Up", "No Show"), legend = c("Lost Generation", "Greatest Generation", "Slient Generation", "Baby Boomers", "Generation x", "Millennials", "Generation Z", "Generation Alpha"), xlab = "Generation", ylab= "Number of People", col= rainbow(8), ylim=c(0, 20000))
+```
+
