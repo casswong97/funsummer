@@ -1,0 +1,84 @@
+---
+title: "HW 6"
+author: "Natasha"
+date: "April 3, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+docapt= read.csv("Doctoapt.csv")
+```
+
+Gender Analysis
+```{r}
+docapt$Gender2= as.numeric(docapt$Gender)
+counts1= table(docapt$Gender2)
+barplot(counts1, main="Appointment by Gender", beside=TRUE, col= c("Pink", "Blue"), names.arg = c("Female", "Male"), 	legend = c("Female", "Male"), xlab = "Gender", ylab= "Number of People")
+counts= table(docapt$Gender2, docapt$No.show)
+barplot(counts, main="Appointment Attendance by Gender", beside=TRUE, col= c("Pink", "Blue"), names.arg = c("Showed Up", "No Show"), 	legend = c("Female", "Male"), xlab = "Gender", ylab= "Number of People", ylim=c(0, 60000))
+prop.table(counts)
+showupfem= length(which(docapt$Gender2==1 & docapt$No.show== "No"))
+noshowfem= length(which(docapt$Gender2==1 & docapt$No.show== "Yes"))
+showupmal= length(which(docapt$Gender2==2 & docapt$No.show== "No"))
+noshowmal= length(which(docapt$Gender2==2 & docapt$No.show== "Yes"))
+cat("The table shows that males tend not to show up at a lower percantage than females 7% to 13.2% however since more females are making apointments overall it is not fair just to say females show up less than males. From the total percentage of patients who are females", noshowfem/(showupfem+noshowfem), "do not show up versus", noshowmal/(showupmal+noshowmal), "revealing that overall about the same percent of each gender tend to not show up.")
+
+```
+
+
+Age Analysis
+
+```{r}
+docapt$AgeGroup= ifelse(docapt$Age>=109 & docapt$Age<=115, "Lost Generation", ifelse(docapt$Age>=94 & docapt$Age<=108, "Greatest Generation", ifelse(docapt$Age>=73 & docapt$Age<=93, "Slient Generation", ifelse(docapt$Age>=54 & docapt$Age<=72, "Baby Boomers", ifelse(docapt$Age>=39 & docapt$Age<=53, "Generation X", ifelse(docapt$Age>=24 & docapt$Age<=38, "Millennials", ifelse(docapt$Age>=6 & docapt$Age<=23, "Generation Z", "Generation Alpha")))))))
+counts3= table(docapt$AgeGroup, docapt$No.show)
+barplot(counts3, main="Appointment Attendance by Generation", beside=TRUE, names.arg = c("Showed Up", "No Show"), legend = c("Lost Generation", "Greatest Generation", "Slient Generation", "Baby Boomers", "Generation x", "Millennials", "Generation Z", "Generation Alpha"), xlab = "Generation", ylab= "Number of People", col= rainbow(8), ylim=c(0, 20000))
+prop.table(counts3)
+#This barplot reveals that Generation X and Millennials tend not to vist the doctors that much for this office. Consequnetly, looking at the other generations it seems like the Lost Generation seems to show up at the highest rate compared to not showing up. This makes sense since they are the oldest and probably need the most medicial attention. On the other hand, the slient Generation seems to have the most no shows compared to showing up. Consequently, for patients in this age range should be given extra attention when scheduling appointments. 
+
+```
+
+SMS Analysis
+```{r}
+counts4= table(docapt$SMS_received, docapt$No.show)
+barplot(counts4, main="Appointment Attendance based on Whether SMS Received", beside=TRUE, col= c("Blue", "Green"), names.arg = c("Showed Up", "No Show"), 	legend = c("No SMS", "SMS Sent"), ylab= "Number of People", ylim=c(0, 70000))
+#The usage of SMS to patients does seem to help increase attedance as shown by the small gap between show and no show with SMS sent. 
+```
+
+SVM Model to predict attendance (not using neighborhood and scheduled day for  now)
+
+```{r}
+doctsvm= data.frame(docapt)
+doctsvm$PatientId= NULL
+doctsvm$AppointmentID= NULL
+doctsvm$Gender2= NULL
+doctsvm$AgeGroup= NULL
+doctsvm$Neighbourhood= NULL
+doctsvm$ScheduledDay= NULL
+
+doctsvm$Scholarship= as.factor(doctsvm$Scholarship)
+doctsvm$Hipertension= as.factor(doctsvm$Hipertension)
+doctsvm$Diabetes= as.factor(doctsvm$Diabetes)
+doctsvm$Alcoholism= as.factor(doctsvm$Alcoholism)
+doctsvm$Handcap= as.factor(doctsvm$Handcap)
+doctsvm$SMS_received= as.factor(doctsvm$SMS_received)
+
+w <- as.data.frame(model.matrix(~ .-1, data = doctsvm))
+w$No.showYes= NULL
+w$No.show= docapt$No.show
+
+in_train1 <- createDataPartition(w$No.show, p = 0.8, list = FALSE)
+doc_train <- w[in_train, ]
+doc_test <- w[-in_train, ]
+
+library(kernlab)
+doc_classifier <- ksvm(No.show ~ ., data = w,
+                          kernel = "vanilladot")
+
+doc_predictions <- predict(doc_classifier, doc_test)
+
+agreement4 <- doc_predictions == de_test$Defaulted
+table(agreement4)
+prop.table(table(agreement4))
+```
+
