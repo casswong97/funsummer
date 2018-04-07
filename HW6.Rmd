@@ -49,14 +49,69 @@ docapt$month <- as.numeric(as.character(docapt$month))
 docapt$weekday <- ordered(docapt$weekday, levels = c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
 
 barplot(table(docapt$weekday), ylab = "Number of Scheduled Appointments", xlab ="Day", main="Number of Patients Scheduling Appointments per Day of Week", col = docapt$weekday)
+
+counts= table(docapt$No.show, docapt$weekday)
+barplot(counts, main="Appointment Data by Day of Week", beside=TRUE, names.arg = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"), legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People")
+
+monProp <- length(which(docapt$weekday == "Monday" & docapt$No.show == 0)) / (length(which(docapt$weekday == "Monday" & docapt$No.show == 0)) + length(which(docapt$weekday == "Monday" & docapt$No.show == 1)))
+
+tuesProp <- length(which(docapt$weekday == "Tuesday" & docapt$No.show == 0)) / (length(which(docapt$weekday == "Tuesday" & docapt$No.show == 0)) + length(which(docapt$weekday == "Tuesday" & docapt$No.show == 1)))
+
+wedProp <- length(which(docapt$weekday == "Wednesday" & docapt$No.show == 0)) / (length(which(docapt$weekday == "Wednesday" & docapt$No.show == 0)) + length(which(docapt$weekday == "Wednesday" & docapt$No.show == 1)))
+
+thursProp <- length(which(docapt$weekday == "Thursday" & docapt$No.show == 0)) / (length(which(docapt$weekday == "Thursday" & docapt$No.show == 0)) + length(which(docapt$weekday == "Thursday" & docapt$No.show == 1)))
+
+friProp <- length(which(docapt$weekday == "Friday" & docapt$No.show == 0)) / (length(which(docapt$weekday == "Friday" & docapt$No.show == 0)) + length(which(docapt$weekday == "Friday" & docapt$No.show == 1)))
+
+cat("The proportion of no shows per each day of the week are as follows. Monday:", monProp, ". Tuesday:", tuesProp, ". Wednesday:", wedProp, ". Thursday:", thursProp, ". Friday:", friProp, ". As we can see, the proportion of no shows were the highest on Fridays.")
+
+rm(monProp, tuesProp, wedProp, thursProp, friProp)
 ```
+
 ```{r}
 barplot(table(docapt$month), ylab = "Number of Scheduled Appointments", xlab ="Day", main="Number of Patients Scheduling Appointments per Month", col = docapt$month)
+
+counts2= table(docapt$No.show, docapt$month)
+barplot(counts2, main="Appointment Data by Month", beside=TRUE, legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People")
+
+janProp <- length(which(docapt$month == 1 & docapt$No.show == 0)) / (length(which(docapt$month == 1 & docapt$No.show == 0)) + length(which(docapt$month == 1 & docapt$No.show == 1)))
+
+febProp <- length(which(docapt$month == 2 & docapt$No.show == 0)) / (length(which(docapt$month == 2 & docapt$No.show == 0)) + length(which(docapt$month == 2 & docapt$No.show == 1)))
+
+marProp <- length(which(docapt$month == 3 & docapt$No.show == 0)) / (length(which(docapt$month == 3 & docapt$No.show == 0)) + length(which(docapt$month == 3 & docapt$No.show == 1)))
+
+aprProp <- length(which(docapt$month == 4 & docapt$No.show == 0)) / (length(which(docapt$month == 4 & docapt$No.show == 0)) + length(which(docapt$month == 4 & docapt$No.show == 1)))
+
+mayProp <- length(which(docapt$month == 5 & docapt$No.show == 0)) / (length(which(docapt$month == 5 & docapt$No.show == 0)) + length(which(docapt$month == 5 & docapt$No.show == 1)))
+
+juneProp <- length(which(docapt$month == 6 & docapt$No.show == 0)) / (length(which(docapt$month == 6 & docapt$No.show == 0)) + length(which(docapt$month == 6 & docapt$No.show == 1)))
+
+novProp <- length(which(docapt$month == 11 & docapt$No.show == 0)) / (length(which(docapt$month == 11 & docapt$No.show == 0)) + length(which(docapt$month == 11 & docapt$No.show == 1)))
+
+decProp <- length(which(docapt$month == 12 & docapt$No.show == 0)) / (length(which(docapt$month == 12 & docapt$No.show == 0)) + length(which(docapt$month == 12 & docapt$No.show == 1)))
+
+cat("The proportion of no shows per each month of scheduling are as follows. January:", janProp, ". February:", febProp, ". March:", marProp, ". April:", aprProp, ". May:", mayProp, ". June:", juneProp, ". November:", novProp, ". December:", decProp, ". As we can see, the proportion of no shows were the highest when the appointment were scheduled in March. However, we believe that this may be because the dataset does not show us many appointments made during most months available, so this potentially may be skewed, and would thus not be the best indicator of whether a patient would be a no-show appointment or not.")
+
+rm(janProp, febProp, aprProp, mayProp, juneProp, novProp, decProp)
 ```
+
 ```{r}
 docapt$appointmentMonth <- format(docapt$AppointmentDay,"%m")
 docapt$appointmentMonth <- as.numeric(as.character(docapt$appointmentMonth), na.rm=TRUE)
 barplot(table(docapt$appointmentMonth), ylab = "Number of Scheduled Appointments", xlab ="Month", main="Number of Patients Scheduled Appointments per Month", col = docapt$appointmentMonth)
+
+counts3= table(docapt$No.show, month(docapt$appointmentMonth))
+barplot(counts3, main="Scheduled Appointment Data by Month", beside=TRUE, legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People")
+
+aprProp <- length(which(docapt$appointmentMonth == 4 & docapt$No.show == 0)) / (length(which(docapt$appointmentMonth == 4 & docapt$No.show == 0)) + length(which(docapt$appointmentMonth == 4 & docapt$No.show == 1)))
+
+mayProp <- length(which(docapt$appointmentMonth == 5 & docapt$No.show == 0)) / (length(which(docapt$appointmentMonth == 5 & docapt$No.show == 0)) + length(which(docapt$appointmentMonth == 5 & docapt$No.show == 1)))
+
+juneProp <- length(which(docapt$appointmentMonth == 6 & docapt$No.show == 0)) / (length(which(docapt$appointmentMonth == 6 & docapt$No.show == 0)) + length(which(docapt$appointmentMonth == 6 & docapt$No.show == 1)))
+
+cat("The proportion of no shows per each month where appointments were made are as follows. April:", aprProp, ". May:", mayProp, ". June:", juneProp, ". As we can see, the proportion of no shows were the highest in May. However, like said above, the dataset does not show us many appointments made during other months, so this may potentially be skewed, and would thus not be the best indicator of whether a patient would be a no-show appointment or not.")
+
+rm(aprProp, mayProp, juneProp)
 ```
 
 ```{r}
@@ -74,15 +129,20 @@ plot1
 
 proportionNoShows = length(which(docapt$No.show == 0)) / (length(which(docapt$No.show == 1)) + length(which(docapt$No.show == 0)))
 
-cat("The number of docapt showing up to the appointment is", length(which(docapt$No.show == 1)), "and the number of docapt not showing up to the appointment is", length(which(docapt$No.show == 0)), ". The proportion of people not showing up is", proportionNoShows, ".")
+cat("The number of patients showing up to the appointment is", length(which(docapt$No.show == 1)), "and the number of docapt not showing up to the appointment is", length(which(docapt$No.show == 0)), ". The proportion of people not showing up is", proportionNoShows, ".")
 
-#next steps:
-#1. make a thing where it shows how many no shows there were per month (make a line chart like above)
-#2. make a bar chart where it shows how many no shows there were each month (clustered column with shows), do some proportions
+prop50 <- length(which(docapt$No.show == 0 & docapt$waitingTime >= 0 & docapt$waitingTime < 50)) / (length(which(docapt$No.show == 1 & docapt$waitingTime >= 0 & docapt$waitingTime < 50)) + length(which(docapt$No.show == 0 & docapt$waitingTime >= 0 & docapt$waitingTime < 50)))
+
+prop100 <- length(which(docapt$No.show == 0 & docapt$waitingTime >= 50 & docapt$waitingTime < 100)) / (length(which(docapt$No.show == 1 & docapt$waitingTime >= 50 & docapt$waitingTime < 100)) + length(which(docapt$No.show == 0 & docapt$waitingTime >= 50 & docapt$waitingTime < 100)))
+
+prop150 <- length(which(docapt$No.show == 0 & docapt$waitingTime >= 100 & docapt$waitingTime < 150)) / (length(which(docapt$No.show == 1 & docapt$waitingTime >= 100 & docapt$waitingTime < 150)) + length(which(docapt$No.show == 0 & docapt$waitingTime >= 100 & docapt$waitingTime < 150)))
+
+propOver <- length(which(docapt$No.show == 0 & docapt$waitingTime >= 150)) / (length(which(docapt$No.show == 1 & docapt$waitingTime >= 150)) + length(which(docapt$No.show == 0 & docapt$waitingTime >= 150)))
+
+cat("The proportion of patients who waited between 0 and 50 days for their doctor appointment and did not show up is", prop50, ". The proportion of patients who waited between 50 and 100 days for their doctor appointment and did not show up is", prop100, ". The proportion of patients who waited between 100 and 150 days for their doctor appointment and did not show up is", prop150, ". Finally, the proportion of patients who waited over 150 days for their doctor appointment and did not show up is", propOver, ". This information is interesting because it seems like the proportion of no-shows tend to increase as the waiting time between scheduling the doctor appointment, which indicates that people may have forgotten that they had scheduled an appointment and thus did not show up, or there may be another underlying reason why they did not show up. This will be explored in the rest of our code.")
 ```
 
 ```{r}
-counts3= table(docapt$AgeGroup, docapt$No.show)
-barplot(counts3, main="Appointment Attendance by Generation", beside=TRUE, names.arg = c("Showed Up", "No Show"), legend = c("Lost Generation", "Greatest Generation", "Slient Generation", "Baby Boomers", "Generation x", "Millennials", "Generation Z", "Generation Alpha"), xlab = "Generation", ylab= "Number of People", col= rainbow(8), ylim=c(0, 20000))
+#lm, glm, probit
 ```
 
