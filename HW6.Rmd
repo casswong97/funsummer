@@ -51,10 +51,10 @@ docapt$month <- format(docapt$fullScheduledDate,"%m")
 docapt$month <- as.numeric(as.character(docapt$month))
 docapt$weekday <- ordered(docapt$weekday, levels = c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
 
-barplot(table(docapt$weekday), ylab = "Number of Scheduled Appointments", xlab ="Day", main="Number of Patients Scheduling Appointments per Day of Week", col = docapt$weekday)
+barplot(table(docapt$weekday), ylab = "Number of Scheduled Appointments", xlab ="Day", main="Number of Patients Scheduling Appointments per Day of Week", col = c("Red","Orange","Blue","Green","Purple"))
 
 counts= table(docapt$No.show, docapt$weekday)
-barplot(counts, main="Appointment Data by Day of Week", beside=TRUE, names.arg = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"), legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People")
+barplot(counts, main="Appointment Data by Day of Week", beside=TRUE, names.arg = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"), legend = c("No Show", "Show"), col = c("Green","Blue"), xlab = "Number of Appointments", ylab= "Number of People")
 
 monProp <- length(which(docapt$weekday == "Monday" & docapt$No.show == 0)) / (length(which(docapt$weekday == "Monday" & docapt$No.show == 0)) + length(which(docapt$weekday == "Monday" & docapt$No.show == 1)))
 
@@ -73,7 +73,7 @@ cat("The proportion of no shows per each day of the week are as follows. Monday:
 barplot(table(docapt$month), ylab = "Number of Scheduled Appointments", xlab ="Day", main="Number of Patients Scheduling Appointments per Month", col = docapt$month)
 
 counts2= table(docapt$No.show, docapt$month)
-barplot(counts2, main="Appointment Data by Month", beside=TRUE, legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People")
+barplot(counts2, main="Appointment Data by Month", beside=TRUE, legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People", col = c("Green","Blue"))
 
 janProp <- length(which(docapt$month == 1 & docapt$No.show == 0)) / (length(which(docapt$month == 1 & docapt$No.show == 0)) + length(which(docapt$month == 1 & docapt$No.show == 1)))
 
@@ -100,7 +100,7 @@ docapt$appointmentMonth <- as.numeric(as.character(docapt$appointmentMonth), na.
 barplot(table(docapt$appointmentMonth), ylab = "Number of Scheduled Appointments", xlab ="Month", main="Number of Patients Scheduled Appointments per Month", col = docapt$appointmentMonth)
 
 counts3= table(docapt$No.show, month(docapt$appointmentMonth))
-barplot(counts3, main="Scheduled Appointment Data by Month", beside=TRUE, legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People")
+barplot(counts3, main="Scheduled Appointment Data by Month", beside=TRUE, legend = c("No Show", "Show"), xlab = "Number of Appointments", ylab= "Number of People", col = c("Green","Blue"))
 
 aprProp <- length(which(docapt$appointmentMonth == 4 & docapt$No.show == 0)) / (length(which(docapt$appointmentMonth == 4 & docapt$No.show == 0)) + length(which(docapt$appointmentMonth == 4 & docapt$No.show == 1)))
 
@@ -169,7 +169,25 @@ cat("This 'optimal' linear regression model includes only the variables that wer
 glmOptimal <- glm(No.show ~ Age + Scholarship + AppointmentDay + fullScheduledDate + month + appointmentMonth + waitingTime + hourOfSchedule, data = docapt)
 summary(glmOptimal)
 
-#with hour of schedule, 105980
-
 cat("This generalized linear regression model includes all variables that were significant, but because the values for null deviance, residual deviance, and AIC are very high, we don't think this would be the best model for predicting no shows either. However, when we were testing other variables, this mix of variables turned out to be the lowest generated AIC, and all the variables are significant.")
 ```
+
+```{r}
+probit.model <- glm(No.show ~ Age + Scholarship + AppointmentDay + fullScheduledDate + month + appointmentMonth + waitingTime + hourOfSchedule, data = docapt, family = binomial(link="probit"))
+summary(probit.model)
+
+cat("The probit model for the above variables also has very high values for null deviance, residual deviance, and AIC. Ultimately, linear regression and logistic regression models probably aren't the best model for predicting patient no shows.")
+```
+
+Scholarship Analysis
+```{r}
+counts5= table(docapt$No.show, docapt$Scholarship)
+barplot(counts5, main="Appointment Data by Scholarship", beside=TRUE, names.arg = c("No Scholarship", "Scholarship"), legend = c("No Show", "Show"), xlab = "Scholarship", ylab= "Number of People", col = c("Green","Blue"))
+
+noScholProp <- length(which(docapt$Scholarship == 0 & docapt$No.show == 0)) / (length(which(docapt$Scholarship == 0 & docapt$No.show == 0)) + length(which(docapt$Scholarship == 0 & docapt$No.show == 1)))
+
+hasScholProp <- length(which(docapt$Scholarship == 1 & docapt$No.show == 0)) / (length(which(docapt$Scholarship == 1 & docapt$No.show == 0)) + length(which(docapt$Scholarship == 1 & docapt$No.show == 1)))
+
+cat("The proportion of no shows amongst patients who have Scholarship is", hasScholProp, ", and the proportion of no shows amongst patients who did not have Scholarship is", noScholProp, ". This is interesting because patients who have Scholarship are those who receive financial aid from the Bolsa Familia and are generally worse off compared to those who don't have Scholarship, and we wish there was more data for us to pull from to dive into why those who are receiving aid are not showing up to their doctor appointments (which are probably subsidized in some form by the aid) as much as those who are not receiving aid.")
+```
+
