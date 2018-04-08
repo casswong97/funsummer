@@ -22,6 +22,9 @@ docapt$AppointmentDay <- as.POSIXct(substr(docapt$AppointmentDay, 1, 10))
 
 docapt$ScheduledDay <- NULL
 
+docapt$No.show <- ifelse(docapt$No.show == "No", 1, 0)
+#1 = showed up, 0 = no show
+
 docapt$hourOfSchedule <- hour(docapt$fullScheduledTime) #helps with time of day
 docapt$hourOfSchedule <- ifelse((minute(docapt$fullScheduledTime) >= 16 & minute(docapt$fullScheduledTime) <= 30), docapt$hourOfSchedule+0.25, docapt$hourOfSchedule)
 docapt$hourOfSchedule <- ifelse((minute(docapt$fullScheduledTime) >= 31 & minute(docapt$fullScheduledTime) <= 45), docapt$hourOfSchedule+0.5, docapt$hourOfSchedule)
@@ -64,8 +67,6 @@ thursProp <- length(which(docapt$weekday == "Thursday" & docapt$No.show == 0)) /
 friProp <- length(which(docapt$weekday == "Friday" & docapt$No.show == 0)) / (length(which(docapt$weekday == "Friday" & docapt$No.show == 0)) + length(which(docapt$weekday == "Friday" & docapt$No.show == 1)))
 
 cat("The proportion of no shows per each day of the week are as follows. Monday:", monProp, ". Tuesday:", tuesProp, ". Wednesday:", wedProp, ". Thursday:", thursProp, ". Friday:", friProp, ". As we can see, the proportion of no shows were the highest on Fridays.")
-
-rm(monProp, tuesProp, wedProp, thursProp, friProp)
 ```
 
 ```{r}
@@ -91,8 +92,6 @@ novProp <- length(which(docapt$month == 11 & docapt$No.show == 0)) / (length(whi
 decProp <- length(which(docapt$month == 12 & docapt$No.show == 0)) / (length(which(docapt$month == 12 & docapt$No.show == 0)) + length(which(docapt$month == 12 & docapt$No.show == 1)))
 
 cat("The proportion of no shows per each month of scheduling are as follows. January:", janProp, ". February:", febProp, ". March:", marProp, ". April:", aprProp, ". May:", mayProp, ". June:", juneProp, ". November:", novProp, ". December:", decProp, ". As we can see, the proportion of no shows were the highest when the appointment were scheduled in March. However, we believe that this may be because the dataset does not show us many appointments made during most months available, so this potentially may be skewed, and would thus not be the best indicator of whether a patient would be a no-show appointment or not.")
-
-rm(janProp, febProp, aprProp, mayProp, juneProp, novProp, decProp)
 ```
 
 ```{r}
@@ -110,19 +109,12 @@ mayProp <- length(which(docapt$appointmentMonth == 5 & docapt$No.show == 0)) / (
 juneProp <- length(which(docapt$appointmentMonth == 6 & docapt$No.show == 0)) / (length(which(docapt$appointmentMonth == 6 & docapt$No.show == 0)) + length(which(docapt$appointmentMonth == 6 & docapt$No.show == 1)))
 
 cat("The proportion of no shows per each month where appointments were made are as follows. April:", aprProp, ". May:", mayProp, ". June:", juneProp, ". As we can see, the proportion of no shows were the highest in May. However, like said above, the dataset does not show us many appointments made during other months, so this may potentially be skewed, and would thus not be the best indicator of whether a patient would be a no-show appointment or not.")
-
-rm(aprProp, mayProp, juneProp)
 ```
 
 ```{r}
 docapt$waitingTime <- docapt$AppointmentDay - docapt$fullScheduledDate
 #gets the number of days instead of seconds
 docapt$waitingTime <- (docapt$waitingTime / 86400)
-
-ggplot(data = docapt, y = docapt$waitingTime, jitter = True)
-
-docapt$No.show <- ifelse(docapt$No.show == "No", 1, 0)
-#1 = showed up, 0 = no show
 
 plot1 <- ggplot() + geom_jitter(aes(y = docapt$waitingTime, x = docapt$No.show), data = docapt, stat="identity")
 plot1
@@ -143,6 +135,41 @@ cat("The proportion of patients who waited between 0 and 50 days for their docto
 ```
 
 ```{r}
-#lm, glm, probit
+lmModelSicknesses <- lm(No.show ~ Hipertension + Diabetes + Alcoholism + Handcap, data = docapt)
+summary(lmModelSicknesses)
+
+cat("This linear regression model shows that it seems like the only variable that is significant in a linear regression model for predicting patient no-shows is hypertension.The R-squared is very low though, however, so this means that there must be other variables that we can look at for a better fit.")
 ```
 
+```{r}
+lmModelCharacteristics <- lm(No.show ~ Gender + Age + Scholarship, data = docapt)
+summary(lmModelCharacteristics)
+
+cat("This linear regression model shows that Age and Scholarship are more significant in determining the probability of a patient no show, although the R-squared is still very low like before.")
+```
+
+```{r}
+docapt$waitingTime <- as.integer(docapt$waitingTime)
+
+lmModelTime <- lm(No.show ~ AppointmentDay + fullScheduledDate + fullScheduledTime + hourOfSchedule + weekday + month + appointmentMonth + waitingTime, data = docapt)
+summary(lmModelTime)
+
+cat("This linear regression model shows that the day and month of appointment, day and month of scheduling the appointment, and amount of time waited between the scheduled day and appointment day are significant. However, like the previous linear regression models, the R-squared is very low.")
+```
+
+```{r}
+lmOptimal <- lm(No.show ~ Age + Scholarship + AppointmentDay + fullScheduledDate + month + appointmentMonth + waitingTime, data = docapt)
+summary(lmOptimal)
+
+cat("This 'optimal' linear regression model includes only the variables that were significant in the previous models. However, the R-squared is still very low, which ultimately means that linear regression models are probably not the best to use to predict no-shows.")
+```
+
+
+```{r}
+glmOptimal <- glm(No.show ~ Age + Scholarship + AppointmentDay + fullScheduledDate + month + appointmentMonth + waitingTime + hourOfSchedule, data = docapt)
+summary(glmOptimal)
+
+#with hour of schedule, 105980
+
+cat("This generalized linear regression model includes all variables that were significant, but because the values for null deviance, residual deviance, and AIC are very high, we don't think this would be the best model for predicting no shows either. However, when we were testing other variables, this mix of variables turned out to be the lowest generated AIC, and all the variables are significant.")
+```
