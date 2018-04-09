@@ -1,0 +1,223 @@
+---
+title: "HW 6"
+author: "Michael"
+date: "April 3, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+appointment = read.csv('KaggleV2-May-2016.csv')
+set.seed(12345)
+
+```
+
+```{r}
+#exploring data
+str(appointment)
+summary(appointment$PatientId)
+#do we want a missed appointment before?
+mean(table(appointment$PatientId))
+max(table(appointment$PatientId))
+median(table(appointment$PatientId))
+length(table(appointment$PatientId)[table(appointment$PatientId)>3])
+```
+
+```{r}
+library(dplyr)
+
+
+#Cleaning up the Age Data
+appointment$Age[appointment$Age<=-1] = 0
+
+#Cleaning data -> Making ID and appointment # factors
+appointment$PatientId = as.factor(appointment$PatientId)
+appointment$AppointmentID = as.factor(appointment$AppointmentID)
+
+
+#Creating days between Scheduled Day and Appointment Day
+appointment$date_between = as.integer(as.Date(appointment$AppointmentDay) - as.Date(appointment$ScheduledDay))
+
+#creating day of week
+appointment$day = weekdays(as.Date(appointment$AppointmentDay))
+
+#average age by neighborhood
+avg_age_by_neigh = appointment %>% group_by(Neighbourhood) %>% summarise(avg_age = mean(Age))
+
+appointment$avg_age_by_neigh = as.numeric(unlist(avg_age_by_neigh[match(appointment$Neighbourhood, avg_age_by_neigh$Neighbourhood), 2]))
+
+#Get time of day
+appointment$time_of_day = as.integer(substr(appointment$ScheduledDay,12, 13))
+appointment$time_of_day = ifelse(appointment$time_of_day<10, "Morning", ifelse(appointment$time_of_day < 15, "Afternoon", "Night"))
+
+
+#appointment_as_model_matrix = as.data.frame(model.matrix(~.-1, data =appointment %>% select(-PatientId, -AppointmentID, - ScheduledDay, - AppointmentDay)))
+
+#Gender Female = 0, Male = 1
+appointment$Gender = as.numeric(appointment$Gender) -1
+
+#Yes - 1, No - 0 -->  0 is they showed up, 1 is they didn't show up
+appointment$No.show = as.numeric(appointment$No.show) -1
+```
+
+```{r}
+#Creating new data frame
+appointment_clean =appointment[,!colnames(appointment)%in% c("PatientId", "AppointmentID", "ScheduledDay", "AppointmentDay", "Neighbourhood")]
+
+appointment_clean_matrix = as.data.frame(model.matrix(~.-1, data= appointment_clean))
+
+# model.matrix(~ . -1, data = tele_norm)
+```
+
+
+```{r}
+appointment_correlation = data.frame(appointment$Gender, appointment$Age, appointment$Scholarship, appointment$Hipertension, appointment$Diabetes, appointment$Alcoholism, appointment$Handcap, appointment$SMS_received, appointment$No.show)
+
+#correlation matrix
+library(Hmisc)
+app_corr = rcorr(as.matrix(appointment_correlation))
+app_corr_2 = cor(appointment_clean_matrix)
+
+library(corrplot)
+corrplot(app_corr_2, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 70)
+
+```
+
+
+```{r}
+#create train and test data sets
+library(arules)
+library(caret)
+
+in_train = createDataPartition(appointment_clean_matrix$No.show,p = .8, list=FALSE)
+
+#index = sapply(appointment, is.numeric)
+appoint_scaled = as.data.frame(lapply(appointment_clean_matrix[,!colnames(appointment_clean_matrix) %in% c("No.show")], scale))
+appoint_scaled$No.show = as.factor(appointment$No.show)
+
+
+appoint_train = appoint_scaled[in_train, !colnames(appoint_scaled) %in% c("No.show")]
+appoint_train_labels = appoint_scaled[in_train,colnames(appoint_scaled) %in% c("No.show")]
+
+appoint_test = appoint_scaled[-in_train,!colnames(appoint_scaled) %in% c("No.show")]
+appoint_test_labels = appoint_scaled[-in_train, colnames(appoint_scaled) %in% c("No.show")]
+```
+
+
+
+```{r}
+#knn model 
+library(class)
+appoint_knn_model = knn(train = appoint_train, test=appoint_test, cl =appoint_train_labels, k = 5)
+
+library(gmodels)
+CrossTable(x= appoint_test_labels, y = appoint_knn_model,prop.chisq = FALSE)
+
+confusionMatrix(as.factor(appoint_test_labels), appoint_knn_model)
+
+```
+
+```{r}
+#ANN
+
+library(neuralnet)
+n <- names(appoint_scaled)
+f <- as.formula(paste("No.show ~", paste(n[!n %in% "No.show"], collapse = " + ")))
+
+
+#appoint_ann_model = neuralnet(data = appoint_scaled[in_train, ], formula =  f , hidden =     1, stepmax = 10^6)
+
+#appoint_ann_model2 = readRDS(appoint_ann_model, "appoint_ann_model.rds")
+
+appoint_ann_results = compute(appoint_ann_model, appoint_test)
+
+predicted_appoint_ann = as.numeric(appoint_ann_results$net.result)
+
+predicted_appoint_ann_for_matrix = ifelse(predicted_appoint_ann < .312, 0, 1)
+
+confusionMatrix(data = predicted_appoint_ann_for_matrix, reference =  appoint_test_labels)
+```
+```{r}
+#logit model
+appoint_logit_model = glm(No.show ~. , data = appointment_clean_matrix[in_train,], family= "binomial" )
+summary(appoint_logit_model)
+
+
+
+```
+
+```{r}
+library(C50)
+appoint_dt_model = C5.0(appoint_train, as.factor(appoint_train_labels), trials = 10)
+summary(appoint_dt_model)
+
+appoint_dt_predict <- predict(appoint_dt_model, appoint_test)
+
+CrossTable(appoint_test_labels, appoint_dt_predict,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual no show', 'predicted no show'))
+
+```
+
+```{r}
+#adding error costs to decision tree
+
+
+error_cost <- matrix(c(0, 1, 20, 0), nrow = 2)
+error_cost
+
+appoint_dt_model2 = C5.0(appoint_train, as.factor(appoint_train_labels), trials = 10, costs = error_cost )
+appoint_dt_predict2 <- predict(appoint_dt_model2, appoint_test)
+
+CrossTable(appoint_dt_predict2, appoint_test_labels,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual no show', 'predicted no show'))
+
+
+```
+
+```{r}
+#svm
+library(kernlab)
+appoint_svm_model = ksvm(No.show ~ ., data = appoint_scaled[in_train,],
+                          kernel = "rbfdot")
+  
+appoint_svm_predictions <- predict(appoint_svm_model, appoint_test)
+
+agreement <- appoint_svm_predictions == appoint_test_labels
+table(agreement)
+prop.table(table(agreement))
+
+
+```
+
+
+
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
