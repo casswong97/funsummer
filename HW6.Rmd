@@ -10,6 +10,12 @@ docapt <- read.csv("KaggleV2-May-2016.csv")
 library(chron)
 library(lubridate)
 library(ggplot2)
+library(caret)
+
+docaptSample <- docapt[sample(nrow(docapt), nrow(docapt)*0.10), ]
+write.csv(docaptSample, file = "Sample_DocApt.csv",row.names=FALSE)
+
+docaptSample <- read.csv("Sample_DocApt.csv")
 ```
 
 ```{r}
